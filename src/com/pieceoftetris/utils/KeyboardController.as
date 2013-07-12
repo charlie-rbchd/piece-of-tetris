@@ -1,82 +1,74 @@
 ﻿/*
- * Authors: Joël Robichaud & Maxime St-Louis-Fortier
- * Copyright (c) 2010
- * Version: 1.0.0
- * 
- * Licence Agreement
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * Piece of Tetris
+ * Copyright (C) 2010  Joel Robichaud & Maxime St-Louis-Fortier
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package com.pieceoftetris.utils {
-	
+
 	import com.pieceoftetris.events.SmoothKeyboardEvent;
-	
+
 	import flash.display.Stage;
 	import flash.events.EventDispatcher;
 	import flash.events.KeyboardEvent;
 	import flash.events.TimerEvent;
-	
+
 	public class KeyboardController extends EventDispatcher {
 		/**
 		 * L'instance de la classe
 		 */
 		private static var _instance:KeyboardController = new KeyboardController();
-		
+
 		/**
 		 * Référence au stage
 		 */
 		private static var _stage:Stage;
-		
+
 		/**
 		 * Objet contenant les touches enfoncées
 		 */
 		private static var _keysDown:Object;
-		
+
 		/**
 		 * Objet contenant les touches verouillées,
 		 * celles-ci ne peuvent déclencher de répétitions
 		 */
 		private static var _keysLocked:Object;
-		
+
 		/**
 		 * Objet contenant les Timers nécessaires à la
 		 * diffusion des SmoothKeyboardEvents
 		 */
 		private static var _keysTimers:Object;
-		
+
 		/**
 		 * Détermine si SmoothKeyboardEvent est utilisé à la place de
 		 * KeyboardEvent pour gérer la diffusion d'événements du clavier
 		 */
 		private var _smoothMovements:Boolean;
-		
+
 		/**
 		 * Le delais avant qu'une touche enfoncée soit répétée
 		 */
 		private var _repetitionDelay:Number;
-		
+
 		/**
 		 * L'interval entre les répétitions, donc les diffusions des SmoothKeyboardEvent
 		 */
 		private var _dispatchInterval:Number;
-		
+
 		/**
 		 * Constructeur Singleton
 		 */
@@ -85,7 +77,7 @@ package com.pieceoftetris.utils {
 				throw new Error("KeysController can only be accessed from the static property KeysController.instance");
 			}
 		}
-		
+
 		/**
 		 * Active la capture des touches
 		 *
@@ -105,7 +97,7 @@ package com.pieceoftetris.utils {
 			stage.addEventListener(KeyboardEvent.KEY_DOWN, keyPressed);
 			stage.addEventListener(KeyboardEvent.KEY_UP, keyReleased);
 		}
-		
+
 		/**
 		 * Désactive la capture des touches
 		 */
@@ -117,7 +109,7 @@ package com.pieceoftetris.utils {
 			stage.removeEventListener(KeyboardEvent.KEY_DOWN, keyPressed);
 			stage.removeEventListener(KeyboardEvent.KEY_UP, keyReleased);
 		}
-		
+
 		/**
 		 * Permet de vérifier si une touche est enfoncée ou non
 		 * @return Boolean true si la touche est enfoncée; sinon false
@@ -125,7 +117,7 @@ package com.pieceoftetris.utils {
 		public function isDown ($keyCode:uint):Boolean {
 			return Boolean($keyCode in _keysDown);
 		}
-		
+
 		/**
 		 * Permet de vérifier si une touche est verouillée ou non
 		 * @return Boolean true si la touche est verouillée; sinon false
@@ -133,7 +125,7 @@ package com.pieceoftetris.utils {
 		public function isLocked ($keyCode:uint):Boolean {
 			return Boolean($keyCode in _keysLocked);
 		}
-		
+
 		/**
 		 * Fonction déclenchée lorsqu'une touche est enfoncée
 		 * @param $evt objet évenementiel KeyboardEvent
@@ -142,18 +134,18 @@ package com.pieceoftetris.utils {
 			// Si les smoothMovements sont activés, un Timer doit être déclenché pour pourvoir gérer les répétition
 			if (_smoothMovements && !Boolean(_keysDown[$evt.keyCode])) {
 				this.dispatchEvent(new SmoothKeyboardEvent(SmoothKeyboardEvent.KEY_DOWN, $evt.keyCode));
-				
+
 				// Création du Timer qui, lorsque terminé, créera le Timer diffusant les répétitions
 				var repetitionTimer:KeysTimer = new KeysTimer($evt.keyCode, _repetitionDelay, 1);
 				repetitionTimer.addEventListener(TimerEvent.TIMER_COMPLETE, startRepetitions);
-				
+
 				// Le Timer est stocké dans un objet pour pouvoir le récupérer plus tard
 				_keysTimers[$evt.keyCode] = repetitionTimer;
 			}
-			
+
 			_keysDown[$evt.keyCode] = true;
 		}
-		
+
 		/**
 		 * Fonction déclenchée lorsque le temps avant la première répétition est écoulé
 		 * @param $evt objet évenementiel TimerEvent
@@ -161,15 +153,15 @@ package com.pieceoftetris.utils {
 		private function startRepetitions ($evt:TimerEvent):void {
 			$evt.target.removeEventListener(TimerEvent.TIMER_COMPLETE, startRepetitions);
 			this.dispatchEvent(new SmoothKeyboardEvent(SmoothKeyboardEvent.KEY_DOWN, $evt.target.keyCode));
-			
+
 			// Création du Timer qui diffusera les répétitions
 			var dispatchTimer:KeysTimer = new KeysTimer($evt.target.keyCode, _dispatchInterval);
 			dispatchTimer.addEventListener(TimerEvent.TIMER, dispatchRepetitions);
-			
+
 			// Le Timer est stocké dans un objet pour pouvoir le récupérer plus tard
 			_keysTimers[$evt.target.keyCode] = dispatchTimer;
 		}
-		
+
 		/**
 		 * Diffusion de la répétition d'une touche enfoncée
 		 * @param $evt objet évenementiel TimerEvent
@@ -177,7 +169,7 @@ package com.pieceoftetris.utils {
 		private function dispatchRepetitions ($evt:TimerEvent):void {
 			this.dispatchEvent(new SmoothKeyboardEvent(SmoothKeyboardEvent.KEY_DOWN, $evt.target.keyCode));
 		}
-		
+
 		/**
 		 * Fonction déclenchée lorsqu'une touche est relâchée
 		 * @param $evt objet évenementiel KeyboardEvent
@@ -186,7 +178,7 @@ package com.pieceoftetris.utils {
 			// La touche est supprimée des objets dans lesquels son indice numérique était stocké
 			delete _keysDown[$evt.keyCode];
 			unlockKey($evt.keyCode);
-			
+
 			// Si les smoothMovements sont activés, les écouteurs doivent être supprimés sur les Timers
 			if (_smoothMovements) {
 				try {
@@ -203,11 +195,11 @@ package com.pieceoftetris.utils {
 					// Diffusion de l'événement SmoothKeyboardEvent lié au relâchement d'une touche
 					this.dispatchEvent(new SmoothKeyboardEvent(SmoothKeyboardEvent.KEY_UP, $evt.keyCode));
 				}
-				
+
 			}
-			
+
 		}
-		
+
 		/**
 		 * Permet de verouiller une touche
 		 * @param $keyCode l'indice numérique de la touche à verouiller
@@ -215,7 +207,7 @@ package com.pieceoftetris.utils {
 		public function lockKey ($keyCode:uint):void {
 			_keysLocked[$keyCode] = true;
 		}
-		
+
 		/**
 		 * Permet de déverouiller une touche
 		 * @param $keyCode l'indice numérique de la touche à déverouiller
@@ -223,7 +215,7 @@ package com.pieceoftetris.utils {
 		public function unlockKey ($keyCode:uint):void {
 			delete _keysLocked[$keyCode];
 		}
-		
+
 		/**
 		 * Permet de récupérer le Singleton
 		 * @return KeysController l'instance de la classe
@@ -231,7 +223,7 @@ package com.pieceoftetris.utils {
 		public static function get instance():KeyboardController {
 			return _instance;
 		}
-		
+
 		/**
 		 * Assigne une référence au stage
 		 * @param $stage rérence au stage
@@ -239,7 +231,7 @@ package com.pieceoftetris.utils {
 		public function set stage ($stage:Stage):void {
 			_stage = $stage;
 		}
-		
+
 		/**
 		 * Récupère la référence au stage
 		 * @return Stage référence au stage
@@ -247,9 +239,9 @@ package com.pieceoftetris.utils {
 		public function get stage ():Stage {
 			return _stage;
 		}
-		
+
 	}
-	
+
 }
 
 import flash.utils.Timer;
@@ -262,7 +254,7 @@ internal class KeysTimer extends Timer {
 	 * L'indice numérique de la touche ayant déclenché le Timer
 	 */
 	private var _keyCode:uint;
-	
+
 	/**
 	 * Constructeur
 	 *
@@ -279,7 +271,7 @@ internal class KeysTimer extends Timer {
 		// Le Timer part automatiquement
 		if ($active) this.start();
 	}
-	
+
 	/**
 	 * Permet de récupérer la touche qui a déclenché le Timer
 	 * @return uint l'indice numérique de la touche enfoncée
@@ -287,5 +279,5 @@ internal class KeysTimer extends Timer {
 	public function get keyCode ():uint {
 		return _keyCode;
 	}
-	
+
 }
